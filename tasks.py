@@ -1,6 +1,7 @@
 # tasks.py
 import json  # exporting to files
-from datetime import datetime
+import re
+from datetime import datetime, timedelta, date
 
 import requests  # pulling data
 from bs4 import BeautifulSoup  # xml parsing
@@ -15,7 +16,7 @@ app.conf.timezone = 'UTC'
 app.conf.beat_schedule = {
     # executes every 1 minute
     'scraping-task-one-min': {
-        'task': 'tasks.hackernews_rss',
+        'task': 'tasks.nasdaqtrader_halts_rss',
         'schedule': crontab(),
     }
 }
@@ -33,34 +34,68 @@ def save_function(article_list):
 
 
 @app.task
-def hackernews_rss():
-    article_list = []
+def nasdaqtrader_halts_rss():
+    trade_halt_list = []
     try:
         # execute my request, parse the data using the XML
         # parser in BS4
-        r = requests.get('https://news.ycombinator.com/rss')
-        soup = BeautifulSoup(r.content, features='xml')
+
+        ##### TODO: Create a URL shortener
+        today_date = date.today()
+        today_date_str = today_date.strftime('%m%d%Y')
+        yesterday_date = (today_date - timedelta(days=1))
+        yesterday_date_str = yesterday_date.strftime('%m%d%Y')
+        query_string = 'http://www.nasdaqtrader.com/rss.aspx?feed=tradehalts&haltdate={}&resumedate={}'.format(
+            yesterday_date_str, today_date_str)
+        print(query_string)
+        r = requests.get(query_string)
+        soup = BeautifulSoup(r.content, features='html.parser')
         # select only the "items" I want from the data
-        articles = soup.findAll('item')
+        items = soup.find_all('item')
+        item_dict = {n: list(row) for n in range(len(items)) for row in items}
+        rows = [row[3:13] for row in item_dict.values()]
+        # stripped_rows = list(map(remove_html_tags, rows))
+        for row in rows:
+            print(row[0])
+            print()
+        # print(rows)
+        # print(items)
+        tables = []
+        # items is iterable
+        # print(tables)
+
         # for each "item" I want, parse it into a list
-        for a in articles:
-            title = a.find('title').text
-            link = a.find('link').text
-            published = a.find('pubDate').text
-            # create an "article" object with the data
+        for halt in tables:
+            symbol = halt.find('ndaq:IssueSymbol').text
+            company_name = halt.find('ndaq:IssueName').text
+            halt_code = halt.find('ndaq:ReasonCode').text
+            halt_date = halt.find('ndaq:HaltDate').text
+            halt_time = halt.find('ndaq:HaltTime').text
+            resumption_date = halt.find('ndaq:ResumptionDate').text
+            resumption_time = halt.find('ndaq:ResumptionTime').text
+            # create an "halt_record" object with the data
             # from each "item"
-            article = {
-                'title': title,
-                'link': link,
-                'published': published,
+            halt_record = {
+                'symbol': symbol,
+                'company_name': company_name,
+                'halt_code': halt_code,
+                'halt_date': halt_date,
+                'halt_time': halt_time,
+                'resumption_date': resumption_date,
+                'resumption_time': resumption_time,
                 'created_at': str(datetime.now()),
-                'source': 'HackerNews RSS'
+                'source': 'NasdaqTrader RSS'
             }
-            # append my "article_list" with each "article" object
-            article_list.append(article)
-        print('Finished scraping the articles')
+            print(halt_record)
+            # append my "trade_halt_list" with each "halt_record" object
+            trade_halt_list.append(halt_record)
+        print('Finished scraping the trade halts')
+        print(trade_halt_list)
         # after the loop, dump my saved objects into a .json file
-        return save_function(article_list)
+        return save_function(trade_halt_list)
     except Exception as e:
         print('The scraping job failed. See exception: ')
         print(e)
+
+
+
