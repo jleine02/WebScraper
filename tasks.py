@@ -1,11 +1,24 @@
 # tasks.py
-from celery import Celery
+import json  # exporting to files
+from datetime import datetime
+
 import requests  # pulling data
 from bs4 import BeautifulSoup  # xml parsing
-from datetime import datetime
-import json  # exporting to files
+from celery import Celery
+from celery.schedules import crontab  # scheduler
 
 app = Celery('tasks')
+
+app.conf.timezone = 'UTC'
+
+# scheduled task execution
+app.conf.beat_schedule = {
+    # executes every 1 minute
+    'scraping-task-one-min': {
+        'task': 'tasks.hackernews_rss',
+        'schedule': crontab(),
+    }
+}
 
 
 @app.task
@@ -39,7 +52,9 @@ def hackernews_rss():
             article = {
                 'title': title,
                 'link': link,
-                'published': published
+                'published': published,
+                'created_at': str(datetime.now()),
+                'source': 'HackerNews RSS'
             }
             # append my "article_list" with each "article" object
             article_list.append(article)
