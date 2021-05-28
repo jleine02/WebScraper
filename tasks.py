@@ -28,7 +28,7 @@ def save_function(article_list):
 
     filename = 'articles-{}.json'.format(timestamp)
 
-    with open(filename, 'w').format(timestamp) as outfile:
+    with open(filename, 'w') as outfile:
         json.dump(article_list, outfile)
 
 
@@ -58,7 +58,8 @@ def hackernews_rss():
             }
             # append my "article_list" with each "article" object
             article_list.append(article)
-        # after the loop, dump my saved objects into a .txt file
+        print('Finished scraping the articles')
+        # after the loop, dump my saved objects into a .json file
         return save_function(article_list)
     except Exception as e:
         print('The scraping job failed. See exception: ')

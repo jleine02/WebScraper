@@ -263,3 +263,6 @@ pyvenv.cfg
 .venv
 pip-selfcheck.json
 
+# Json data
+.json
+
