@@ -36,7 +36,7 @@ def save_function(article_list):
 def nasdaqtrader_halts_rss():
     trade_halt_list = []
     try:
-        # execute my request, parse the data using the XML
+        # execute my request, parse the data using the LXML
         # parser in BS4
 
         ##### TODO: Create a URL shortener
